@@ -31,7 +31,7 @@ import MeditationAndExercise from './Components/MeditationAndExercise'
 import ActualAnalyser from './Components/ActualAnalyser'
 import BlogTop from './Components/HarshBlog'
 import FAQ from './Components/FAQ'
-
+import MoodJournal from './Components/Mood'
 function App() {
 
   return (
@@ -68,6 +68,7 @@ function App() {
       <Route path="/ActualAnalyser" element={<ActualAnalyser/>}/>
       <Route path="/BlogTop" element={<BlogTop/>}/>
       <Route path="/FAQ" element={<FAQ/>}/>
+      <Route path="/MoodJournal" element={<MoodJournal/>}/>
       {/* Add more routes as needed */}
     </Routes>
     </>

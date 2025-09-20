@@ -40,10 +40,10 @@ export default function HeaderPage() {
   },[isAnimate]);
 
   const navItems = [
-    { href: "#", label: "Home" },
+    { href: "/", label: "Home" },
     { href: "/FAQ", label: "About" },
     { href: "/MeditationAndExercise", label: "Exercise" },
-    { href: "#addjournals", label: "Add Journals" },
+    // { href: "/MoodJournal", label: "Add Journals" },
     { href: "/Contact", label: "Contact" },
   ]
 

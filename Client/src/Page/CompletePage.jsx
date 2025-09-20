@@ -21,6 +21,7 @@ import BenefitsSection from '../Components/Section_Benefits'
 import Footer2 from '../Components/Footer2'
 import Login from '../Auth/Login'
 import Register from '../Auth/Register'
+import DailyQuote from '../Components/DailyQuotes'
 
 const CompletePage = () => {
   return (
@@ -42,6 +43,7 @@ const CompletePage = () => {
     <SliderComponent/>
     <AnalyseHeroPage/>
     <Brands/>
+    <DailyQuote/>
     <Testimonials/>
     <ReadMore/>
     <FAQ/>

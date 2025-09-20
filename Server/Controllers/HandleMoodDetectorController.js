@@ -16,6 +16,9 @@ const getYourMood = async (req, res) => {
         
         const resultData = await main(myCurrMood);
 
+
+        console.log(`Milgya mood tera bhai ! ---> ${resultData} ${typeof resultData}`);
+
         return res.json({
             status:1,
             data:resultData

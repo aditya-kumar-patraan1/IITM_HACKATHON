@@ -3,18 +3,18 @@ import "../App.css";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast, Toaster } from "react-hot-toast";
-let Uniquekey = 0;
+import { motion, AnimatePresence } from "framer-motion"; // Animation library
 
 const LeftPanel = ({ getLocation, setLocation, place, setPlace }) => {
-  const [getClinics, setClinics] = useState([]);
+  const [clinics, setClinics] = useState([]);
+  const [originalClinics, setOriginalClinics] = useState([]);
   const [isOpen, setOpen] = useState(false);
   const [targetedClinic, setTargetedClinic] = useState(null);
   const navigate = useNavigate();
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
   const [found, setFound] = useState("hospital");
-  const Navigate = useNavigate();
-  const [sorted, setSorted] = useState(false);
-  const [bookId, setbookId] = useState(null);
+  const [isSorted, setIsSorted] = useState(false);
+  const [activeClinicId, setActiveClinicId] = useState(null);
   const [myData, setMyData] = useState({
     appointmentId: "",
     date: "",
@@ -22,442 +22,252 @@ const LeftPanel = ({ getLocation, setLocation, place, setPlace }) => {
     hospitalName: "",
   });
   const [allAppoint, setAllAppoint] = useState([]);
-  const [isBooked, setBooked] = useState(false);
-  const [cancelId, setCancelId] = useState("");
   const [startBook, setStartBook] = useState(false);
 
+  // Function to get reverse-geocoded address
   const getPlace = async (lat, lng) => {
-    if (!lat || !lng) {
-      // console.error("Location is not set properly.");
-      return;
-    }
-
+    if (!lat || !lng) return;
     try {
-      const response = await axios.post(`${BACKEND_URL}/api/getAddress`, {
-        lat,
-        lng,
-      });
+      const response = await axios.post(`${BACKEND_URL}/api/getAddress`, { lat, lng });
       setPlace(response.data.address || "Address not available");
     } catch (error) {
-      // console.error("Error fetching address:", error);
+      console.error("Error fetching address:", error);
     }
   };
 
-  function arrangeClinics() {
-    setSorted(true);
-    const sortedClinics = [...getClinics].sort((a, b) => {
-      return a.distance - b.distance;
-    });
-    // console.log("Clinics sorted by distance:", sortedClinics);
-    setClinics(sortedClinics);
-  }
+  // Improved sort function - Now it's a toggle
+  const toggleSortClinics = () => {
+    if (!isSorted) {
+      const sorted = [...clinics].sort((a, b) => a.distance - b.distance);
+      setClinics(sorted);
+    } else {
+      setClinics(originalClinics); // Revert to original order
+    }
+    setIsSorted(!isSorted);
+  };
 
+  // Fetch nearby clinics from Overpass API
   const getNearbyClinics = async (lat, lng) => {
     if (!lat || !lng) return;
-    // console.log("hospital dhundh rh hu");
-
     const query = `[out:json];node(around:8000,${lat},${lng})[amenity=${found}];out;`;
-    const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(
-      query
-    )}`;
+    const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
     try {
       const res = await fetch(url);
-      const json = await res.json();
-      const data = json.elements;
+      const data = await res.json();
+      const elements = data.elements;
 
-      // console.log(data);
-
-      const temp = data
-        .filter(
-          (item) =>
-            item.tags.name &&
-            item.lat &&
-            item.lon &&
-            item.tags["addr:full"] &&
-            item.tags["addr:state"] &&
-            item.tags["addr:postcode"] &&
-            item.tags["addr:district"]
-        )
+      const temp = elements
+        .filter((item) => item.tags?.name)
         .map((item) => ({
-          appointmentId: Uniquekey++,
+          id: item.id,
           name: item.tags.name,
           lat: item.lat,
           lon: item.lon,
-          address: item.tags["addr:full"] || "Address not available",
-          state: item.tags["addr:state"] || "State not available",
-          postcode: item.tags["addr:postcode"] || "Postcode not available",
-          district: item.tags["addr:district"] || "District not available",
+          address: item.tags["addr:full"] || "Address not specified",
           distance: findDistance(lat, lng, item.lat, item.lon),
         }));
-      setClinics(temp || []);
+      setClinics(temp);
+      setOriginalClinics(temp);
+      setIsSorted(false);
     } catch (err) {
-      // console.error("Error fetching clinics:", err);
+      console.error("Error fetching clinics:", err);
     }
   };
 
-  // useEffect(() => console.log(allAppoint), [allAppoint]);
-
-  async function saveBooking() {
+  const saveBooking = async () => {
     if (!myData.date || !myData.time) {
-      toast.error("Fill timing and date");
-      return;
+      return toast.error("Please select a date and time.");
     }
-    // console.log("ye ho rh booking");
-    // console.log(myData);
-    await axios
-      .post(`${BACKEND_URL}/api/appointment/addAppointment`, myData, {
-        withCredentials: true,
-      })
-      .then((response) => {
-        if (response.data.status) {
-          // console.log("Booking saved successfully:", response.data);
-          setStartBook(false);
-          setBooked(true);
-          // console.log(myData.appointmentId);
-          setAllAppoint((prev) => [...prev, myData.appointmentId]);
-          setMyData({
-            appointmentId: "",
-            date: "",
-            time: "",
-            hospitalName: "",
-          });
-          toast.success("Added to Wishlist");
-        }
-      })
-      .catch((e) => {
-        // console.error("Error saving booking:", e);
-      });
-  }
-
-  // useEffect(() => console.log(allAppoint), [allAppoint]);
-
-  // useEffect(() => {
-    // console.log(getClinics);
-  // }, [getClinics]);
+    try {
+      const response = await axios.post(`${BACKEND_URL}/api/appointment/addAppointment`, myData, { withCredentials: true });
+      if (response.data.status) {
+        setAllAppoint((prev) => [...prev, myData.appointmentId]);
+        setOpen(false);
+        toast.success("Added to your Wishlist!");
+      }
+    } catch (e) {
+      console.error("Error saving booking:", e);
+    }
+  };
 
   const myLocation = () => {
-    setSorted(false);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setLocation({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        });
-        // console.log("long lat set krrha hu");
-        getNearbyClinics(pos.coords.latitude, pos.coords.longitude);
-        getPlace(pos.coords.latitude, pos.coords.longitude);
+        const { latitude, longitude } = pos.coords;
+        setLocation({ lat: latitude, lng: longitude });
+        getNearbyClinics(latitude, longitude);
+        getPlace(latitude, longitude);
       },
-      (err) => {
-        // console.error("Failed to get location:", err);
-      }
+      (err) => toast.error("Could not get your location.")
     );
-    // console.log("clinics dhundh rha hu 2.0");
   };
 
-  function findDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; // Radius of the earth in km
-    const dLat = deg2rad(lat2 - lat1);
-    const dLon = deg2rad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(deg2rad(lat1)) *
-        Math.cos(deg2rad(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+  const findDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c; // Distance in km
-    return distance.toFixed(2);
-  }
+    return (R * c).toFixed(2);
+  };
 
-  function bookKaro() {
-    setMyData((prev) => ({
-      ...prev,
-      hospitalName: targetedClinic,
-      appointmentId: bookId,
-    }));
+  const bookKaro = () => {
+    setMyData({ hospitalName: targetedClinic, appointmentId: activeClinicId, date: '', time: '' });
     setStartBook(true);
-  }
-
-  function changePlace(value) {
-    setSorted(false);
-    setFound(value);
-    // console.log("Place changed to:", value);
-    // getNearbyClinics(getLocation.lat, getLocation.lng);
-  }
+  };
 
   useEffect(() => {
     if (getLocation.lat && getLocation.lng) {
-      console.log("Searching for:", found);
       getNearbyClinics(getLocation.lat, getLocation.lng);
     }
   }, [found]);
 
-  function deg2rad(deg) {
-    return deg * (Math.PI / 180);
-  }
-
-  // useEffect(() => console.log("Location set:", getLocation), [getLocation]);
-  // useEffect(() => {
-  // console.log("Place set:", place);
-  // }, [place]);
-  // useEffect(() => console.log("Nearby clinics:", getClinics), [getClinics]);
-
-  const targetData = (thisClinic, mylat, mylon, myID) => {
-    setLocation({ lat: mylat, lng: mylon });
-    setTargetedClinic(thisClinic);
-    // console.log(myID);
-    setCancelId(myID);
-    setbookId(myID);
-    setOpen((prev) => !prev);
+  const targetData = (clinic) => {
+    setLocation({ lat: clinic.lat, lng: clinic.lon });
+    setTargetedClinic(clinic.name);
+    setActiveClinicId(clinic.id);
+    setStartBook(false);
+    setOpen(true);
   };
 
-  async function cancelKaro() {
-    // console.log("Cancelling appointment with ID:", cancelId);
-    await axios
-      .post(
-        `${BACKEND_URL}/api/appointment/removeAppointment`,
-        { appointmentId: cancelId },
-        {
-          withCredentials: true,
-        }
-      )
-      .then((response) => {
-        // console.log(response.data);
-        if (response.data.status) {
-          setAllAppoint((prev) => prev.filter((id) => id !== cancelId)); // ✅ fixed here
-          setBooked(false);
-          setMyData({
-            appointmentId: "",
-            date: "",
-            time: "",
-            hospitalName: "",
-          });
-          toast.success("Cancelled to Visit");
-        }
-      })
-      .catch((e) => {
-        // console.log("Error cancelling", e);
-      });
-  }
-
-  // console.log(allAppoint);
+  const cancelKaro = async () => {
+    try {
+      const response = await axios.post(`${BACKEND_URL}/api/appointment/removeAppointment`, { appointmentId: activeClinicId }, { withCredentials: true });
+      if (response.data.status) {
+        setAllAppoint((prev) => prev.filter((id) => id !== activeClinicId));
+        setOpen(false);
+        toast.success("Removed from Wishlist");
+      }
+    } catch (e) {
+      console.log("Error cancelling", e);
+    }
+  };
 
   useEffect(() => {
     const getAllAppointed = async () => {
-      // console.log("lele");
-      await axios
-        .get(`${BACKEND_URL}/api/appointment/getAllApointments`, {
-          withCredentials: true,
-        })
-        .then((res) => {
-          if (res.data.myData) {
-            // console.log(res.data.myData);
-            const T = [];
-            for (let ele in res.data.myData) {
-              T.push(res.data.myData[ele].appointmentId);
-            }
-            setAllAppoint(T);
-            // setAllAppoint(res.data.myData.appointmentId);
-          }
-        })
-        .catch((e) => {});
+      try {
+        const res = await axios.get(`${BACKEND_URL}/api/appointment/getAllApointments`, { withCredentials: true });
+        if (res.data.myData) {
+          const appointmentIds = res.data.myData.map(item => item.appointmentId);
+          setAllAppoint(appointmentIds);
+        }
+      } catch (e) {
+        console.error("Could not fetch appointments", e);
+      }
     };
     getAllAppointed();
   }, []);
 
-  // console.log(allAppoint);
+  const isAlreadyBooked = (id) => Array.isArray(allAppoint) && allAppoint.includes(id);
 
-  const solve = (MYID) => {
-    return Array.isArray(allAppoint) && allAppoint.includes(MYID);
+  // Animation Variants
+  const listContainerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.07 } },
+  };
+  const listItemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
   };
 
   return (
-  <>
-    <Toaster />
-    <div className="bg-gradient-to-b from-gray-900 via-blue-900 to-sky-700 w-full  h-screen p-4 sm:p-6 flex flex-col gap-3 text-white overflow-y-auto">
-      {/* Header */}
-      <div className="flex flex-wrap gap-2 flex-col md:flex-row lg:flex-row sm:gap-4 lg:justify-between items-center">
-        <p
-          className="font-semibold cursor-pointer text-2xl text-yellow-300"
-          onClick={() => navigate("/")}
+    <>
+      <Toaster position="top-center" />
+      <div className="bg-slate-100 min-h-screen w-full font-sans">
+        {/* Header */}
+        <motion.header 
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg p-4 flex flex-col sm:flex-row justify-between items-center gap-4"
         >
-          IntelliLocate
-        </p>
-
-        <div className="flex flex-row gap-4">
-          <button
-            onClick={myLocation}
-            className="text-sm sm:text-base bg-green-500 hover:bg-green-600 text-white font-semibold px-4 py-2 rounded-lg shadow-lg transition-all duration-300"
-          >
-            Get Location
-          </button>
-
-          <button
-            onClick={arrangeClinics}
-            className={`text-sm sm:text-base font-semibold px-4 py-2 rounded-lg shadow-lg transition-all duration-300 ${
-              sorted
-                ? "bg-gray-500 text-white cursor-not-allowed"
-                : "bg-blue-500 hover:bg-blue-600 text-white"
-            }`}
-          >
-            Filter
-          </button>
-
-          <div className="relative">
-            <select
-              onChange={(e) => changePlace(e.target.value)}
-              value={found}
-              className="appearance-none text-sm sm:text-base bg-blue-700 text-white font-medium px-4 py-2 pr-8 rounded-lg shadow-md border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-400"
-            >
-              <option value="hospital">🏥 Hospital</option>
-              <option value="clinic">🏨 Clinic</option>
+          <h1 className="text-2xl font-bold cursor-pointer" onClick={() => navigate("/")}>StillMind</h1>
+          <div className="flex flex-wrap justify-center items-center gap-3">
+            <button onClick={myLocation} className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-300 transform hover:scale-105">Get Location</button>
+            <button onClick={toggleSortClinics} className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-300 transform hover:scale-105">{isSorted ? "Unsort" : "Sort by Distance"}</button>
+            <select onChange={(e) => setFound(e.target.value)} value={found} className="bg-white/20 hover:bg-white/30 rounded-lg px-4 py-2 outline-none border-none">
+              <option value="hospital" className="text-black">🏥 Hospital</option>
+              <option value="clinic" className="text-black">🏨 Clinic</option>
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-300">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
           </div>
-        </div>
+        </motion.header>
+
+        {/* Main Content */}
+        <main className="p-4 sm:p-6">
+          <motion.h2 initial={{opacity:0}} animate={{opacity:1}} transition={{delay: 0.3}} className="text-2xl font-bold text-center text-gray-800 mb-4">
+            Nearby {found.charAt(0).toUpperCase() + found.slice(1)}s
+          </motion.h2>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="bg-white rounded-2xl shadow-xl p-4 min-h-[70vh] overflow-y-auto"
+          >
+            <motion.div variants={listContainerVariants} initial="hidden" animate="visible" className="flex flex-col gap-4">
+              {clinics.length > 0 ? (
+                clinics.map((clinic) => (
+                  <motion.div
+                    key={clinic.id}
+                    variants={listItemVariants}
+                    whileHover={{ scale: 1.02, boxShadow: "0px 10px 20px rgba(0,0,0,0.1)" }}
+                    transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                    onClick={() => targetData(clinic)}
+                    className="bg-slate-50 border border-slate-200 rounded-xl p-4 cursor-pointer"
+                  >
+                    <h3 className="text-lg font-bold text-indigo-600">{clinic.name}</h3>
+                    <p className="text-sm text-gray-600">{clinic.address}</p>
+                    <p className="text-sm font-semibold text-gray-800 mt-1">{clinic.distance} km away</p>
+                  </motion.div>
+                ))
+              ) : (
+                <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="flex items-center justify-center h-full min-h-[50vh]">
+                  <p className="text-lg text-center text-gray-500">Press "Get Location" to find nearby places.</p>
+                </motion.div>
+              )}
+            </motion.div>
+          </motion.div>
+        </main>
       </div>
 
-      {/* Booking Modal */}
-      {isOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-          <div className="bg-gradient-to-br from-blue-500/30 via-blue-700/30 to-indigo-900/30 backdrop-blur-md border border-white/20 rounded-2xl p-6 w-[90%] max-w-md shadow-2xl flex flex-col items-center gap-4 text-white">
-            <p className="text-2xl font-bold text-center">Want to Book an Appointment?</p>
-            <p className="text-lg font-light text-center">{targetedClinic}</p>
-            <p
-              onClick={() =>
-                window.open(
-                  `https://www.google.com/search?q=${encodeURIComponent(targetedClinic)}`,
-                  "_blank"
-                )
-              }
-              className="underline text-sm text-blue-200 hover:text-slate-300 cursor-pointer"
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center bg-black/60 z-50 p-4"
+          >
+            <motion.div
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 50, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl flex flex-col items-center gap-4"
             >
-              Get More Info
-            </p>
-
-            {!solve(bookId) && !startBook && (
-              <button
-                onClick={() => bookKaro(targetedClinic)}
-                className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-all duration-300"
-              >
-                Add to Wishlist
-              </button>
-            )}
-
-            {solve(cancelId) && (
-              <button
-                onClick={cancelKaro}
-                className="w-full bg-yellow-500 hover:bg-yellow-400 px-4 py-2 rounded-lg text-white transition-all duration-300"
-              >
-                Cancel Visit
-              </button>
-            )}
-
-            {startBook && (
-              <div className="flex flex-col gap-3 w-full">
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                  <div className="flex items-center gap-2 w-full">
-                    <label className="text-sm">Date:</label>
-                    <input
-                      type="date"
-                      value={myData.date}
-                      onChange={(e) =>
-                        setMyData((prev) => ({
-                          ...prev,
-                          date: e.target.value,
-                        }))
-                      }
-                      className="w-full px-3 py-1 rounded-md border border-gray-300 text-gray-900"
-                    />
+              <h2 className="text-2xl font-bold text-center text-gray-800">{targetedClinic}</h2>
+              <p onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(targetedClinic)}`, "_blank")} className="underline text-sm text-indigo-500 hover:text-indigo-700 cursor-pointer">Get More Info</p>
+              
+              {isAlreadyBooked(activeClinicId) ? (
+                  <button onClick={cancelKaro} className="w-full mt-2 bg-yellow-400 hover:bg-yellow-500 text-black font-bold px-4 py-2 rounded-lg transition-all duration-300">Remove from Wishlist</button>
+                ) : (
+                  <div className="flex flex-col gap-3 w-full mt-2">
+                    <p className="text-center text-gray-500 text-sm">Plan your visit:</p>
+                    <div className="flex items-center gap-2">
+                      <input type="date" onChange={(e) => setMyData(prev => ({ ...prev, date: e.target.value }))} className="w-full px-3 py-2 rounded-md bg-slate-100 border border-slate-300 text-gray-900"/>
+                      <input type="time" onChange={(e) => setMyData(prev => ({ ...prev, time: e.target.value }))} className="w-full px-3 py-2 rounded-md bg-slate-100 border border-slate-300 text-gray-900"/>
+                    </div>
+                    <button onClick={saveBooking} className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold px-4 py-2 rounded-lg transition-all duration-300">Save to Wishlist</button>
                   </div>
-                  <div className="flex items-center gap-2 w-full">
-                    <label className="text-sm">Time:</label>
-                    <input
-                      type="time"
-                      value={myData.time}
-                      onChange={(e) =>
-                        setMyData((prev) => ({
-                          ...prev,
-                          time: e.target.value,
-                        }))
-                      }
-                      className="w-full px-3 py-1 rounded-md border border-gray-300 text-gray-900"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
+                )}
 
-            {!startBook ? (
-              <button
-                onClick={() => setOpen(false)}
-                className="w-full bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-white transition-all duration-300"
-              >
-                Close
-              </button>
-            ) : (
-              <button
-                onClick={saveBooking}
-                className="w-full bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-white transition-all duration-300"
-              >
-                Save
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Clinic List */}
-      <h2 className="text-2xl font-bold text-center pt-2 mb-2">
-        Nearby {found}
-      </h2>
-      <div className="bg-white/10 backdrop-blur-lg rounded-2xl h-full shadow-xl p-4 overflow-y-auto hide-scrollbar">
-        <div className="flex flex-col gap-4">
-          {getClinics.length > 0 ? (
-            getClinics.map((clinic, index) => (
-              <div
-                key={index}
-                onClick={() =>
-                  targetData(clinic.name, clinic.lat, clinic.lon, clinic.appointmentId)
-                }
-                className="bg-white/10 rounded-xl p-4 hover:bg-white/20 transition cursor-pointer"
-              >
-                <h3 className="text-lg font-semibold">
-                  {clinic.name || "Clinic Name Not Available"}
-                </h3>
-                <p className="text-sm text-gray-200">
-                  {clinic.address} {clinic.district}, {clinic.state} - {clinic.postcode}
-                </p>
-                <p className="text-sm text-gray-200">{clinic.distance} km away</p>
-              </div>
-            ))
-          ) : (
-            <div className="flex flex-col items-center justify-center mt-6 animate-fadeInSlow">
-              <div className="px-6 py-4 text-center max-w-sm">
-                <p className="text-lg sm:text-xl font-semibold leading-relaxed">
-                  Press{" "}
-                  <span className="text-yellow-300 font-bold">Get Location</span> to find nearby{" "}
-                  {found === "hospital" ? "hospitals" : "clinics"}!
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  </>
-);
-
+              <button onClick={() => setOpen(false)} className="w-full mt-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition-all duration-300">Close</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
 };
 
 export default LeftPanel;

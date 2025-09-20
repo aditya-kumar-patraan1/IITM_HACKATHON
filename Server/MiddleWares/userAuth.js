@@ -18,7 +18,7 @@ const userAuth = async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         if (!req.body) req.body = {};
         req.body.userId = decoded.id;
-        // console.log("Decoded userId:", req.body.userId);
+        console.log("Decoded userId:", req.body.userId);
     } catch (e) {
         // console.error("Error verifying token:", e.message);  // Log the error message to debug
         return res.status(401).send({

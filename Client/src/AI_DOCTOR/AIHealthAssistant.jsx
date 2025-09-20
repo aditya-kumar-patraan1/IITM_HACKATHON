@@ -88,7 +88,7 @@ return (
 
     {/* Heading */}
     <h1 className="text-4xl sm:text-5xl font-bold text-center text-gray-900 mb-10">
-      IntelliAid
+      StillMind
     </h1>
 
     {/* Top Section */}

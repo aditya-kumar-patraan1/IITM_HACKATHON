@@ -29,24 +29,25 @@ export default function Navbar() {
             scrolled ? "text-black" : "text-white"
           }`}
         >
-          HAPPIER
+          StillMind
         </span>
       </div>
 
       {/* Menu */}
-      <ul
+      <div
         className={`flex-1 flex justify-center space-x-6 text-sm font-medium ${
           scrolled ? "text-black" : "text-white"
         }`}
       >
-        <li className="cursor-pointer hover:underline">Courses</li>
-        <li className="cursor-pointer hover:underline">Meditations</li>
-        <li className="cursor-pointer hover:underline">Happier Weekly</li>
-        <li className="cursor-pointer hover:underline">Our Story</li>
-      </ul>
+        <button onClick={()=>window.open("/","_blank")} className="cursor-pointer hover:underline">Home</button>
+        <button onClick={()=>window.open("/Contact","_blank")} className="cursor-pointer hover:underline">Contact</button>
+        <button onClick={()=>window.open("/FAQ","_blank")} className="cursor-pointer hover:underline">About</button>
+        <button onClick={()=>window.open("/MeditationAndExercise","_blank")} className="cursor-pointer hover:underline">Exercise</button>
+      </div>
 
       {/* Button */}
       <button
+      onClick={()=>window.open("/MeditationAndExercise","__blank")}
         className={`px-6 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer border ${
           scrolled
             ? "bg-black text-white border-black hover:bg-white hover:text-black"

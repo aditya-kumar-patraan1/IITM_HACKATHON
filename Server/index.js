@@ -14,6 +14,7 @@ const Router9 = require("./Routers/DashboardRoutes");
 const Router10 = require("./Routers/uploadHealthRecordRoutes");
 const Router12 = require("./Routers/ContactRoutes");
 const router1 = require("./Routers/MoodDetectorRouter");
+const RouterJournal = require("./Routers/JournalRoutes");
 
 require("dotenv").config();
 app.use(cors({
@@ -42,6 +43,7 @@ app.use("/api/dashboard",Router9);
 app.use("/api/record",Router10);
 app.use("/api/feedback",Router12);
 app.use("/api/mood_analysis",router1);
+app.use("/api/journal",RouterJournal);
 
 const PORT = process.env.PORT || 5000;
 const emailToSocketIdMap = new Map();

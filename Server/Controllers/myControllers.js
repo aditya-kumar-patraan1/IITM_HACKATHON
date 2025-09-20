@@ -7,7 +7,9 @@ const { transporter, transporter2 } = require("../Config/nodemailer");
 require("dotenv").config();
 
 const register = async (req, res) => {
+  // console.log("Register functionality working....");
   const { name, email, password } = req.body;
+  // console.log(req.body);
 
   if (!name || !email || !password) {
     return res.status(400).send({

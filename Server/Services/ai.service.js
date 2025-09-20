@@ -23,13 +23,11 @@ const main = async (prompt) => {
         
     });
     
-    console.log(prompt);
-    
     const result = await model.generateContent(prompt);
+    console.log("Full Response:");
     const response = result.response;
-    console.log("in hehehe api");
-    const finalReply = await response.replace(/\n/g, '').trim();
-    console.log(finalReply);
+    console.log(response.candidates[0].content.parts[0].text);
+    const finalReply = await response.candidates[0].content.parts[0].text;
     return finalReply;
 };
 

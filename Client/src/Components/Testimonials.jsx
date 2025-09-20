@@ -107,7 +107,8 @@ const FeedbackSlider = () => {
     };
 
     return (
-        <div className="mt-20 w-full max-w-6xl mx-auto p-6 bg-transparent rounded-2xl">
+        <div className='bg-transparent'>
+        <div className=" w-full max-w-6xl mx-auto p-6  rounded-2xl">
             <div className="text-center mb-8">
                 <h2 className="text-3xl font-bold text-gray-800 mb-2">What Our Customers Say</h2>
                 <p className="text-gray-600">Drag the cards to explore more testimonials</p>
@@ -169,7 +170,7 @@ const FeedbackSlider = () => {
                     <span className="text-gray-600 font-bold">›</span>
                 </button>
             </div> */}
-        </div>
+        </div></div>
     );
 };
 

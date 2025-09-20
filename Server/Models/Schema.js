@@ -95,6 +95,12 @@ const mySchema = new mongoose.Schema(
         },
       },
     ],
+    journals:[
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "journals",
+      }
+    ]
   },
   {
     timestamps: true,
