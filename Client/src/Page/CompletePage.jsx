@@ -38,7 +38,7 @@ const CompletePage = () => {
     <About/>
     <Footer/> */}
     {/* <Login/> */}
-    {/* <HeaderPage/> */}
+    <HeaderPage/>
     <BannerForMeditation/>
     <SliderComponent/>
     <AnalyseHeroPage/>
