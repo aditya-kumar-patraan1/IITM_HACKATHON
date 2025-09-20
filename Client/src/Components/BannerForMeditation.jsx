@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import PreaceFulYogaImage from "../assets/PeacefulYogaImage.png"
+import PreaceFulYogaImage from "../assets/PeaceFulYogaImage.png"
 import BookReadingImage from "../assets/BookReadingImage.png"
 
 const BannerForMeditation = () => {
